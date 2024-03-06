@@ -1,11 +1,14 @@
 <template>
-  <div :class="className" :style="{height:height,width:width}" />
+  <div :class="className" :style="{height:height,width:width}"/>
 </template>
 
 <script>
 import * as echarts from 'echarts'
+
 require('echarts/theme/macarons') // echarts theme
 import resize from './mixins/resize'
+import { getUserWordPeriodCount } from '@/api/statistics/statistics'
+
 
 export default {
   mixins: [resize],
@@ -25,8 +28,20 @@ export default {
   },
   data() {
     return {
-      chart: null
+      chart: null,
+      statisticData: []
     }
+  },
+  created() {
+    this.$watch(
+      () => this.$route.params,
+      () => {
+        this.getPeriodCount()
+      },
+      // 组件创建完后获取数据，
+      // 此时 data 已经被 observed 了
+      { immediate: true }
+    )
   },
   mounted() {
     this.$nextTick(() => {
@@ -41,9 +56,7 @@ export default {
     this.chart = null
   },
   methods: {
-    initChart() {
-      this.chart = echarts.init(this.$el, 'macarons')
-
+    setChartOptions() {
       this.chart.setOption({
         tooltip: {
           trigger: 'item',
@@ -51,27 +64,27 @@ export default {
         },
         legend: {
           left: 'center',
-          bottom: '10',
-          data: ['Industries', 'Technology', 'Forex', 'Gold', 'Forecasts']
+          data: ['应用', '掌握', '熟悉', '了解', '新学习']
         },
         series: [
           {
-            name: 'WEEKLY WRITE ARTICLES',
+            name: '各阶段单词占比',
             type: 'pie',
-            roseType: 'radius',
             radius: [15, 95],
-            center: ['50%', '38%'],
-            data: [
-              { value: 320, name: 'Industries' },
-              { value: 240, name: 'Technology' },
-              { value: 149, name: 'Forex' },
-              { value: 100, name: 'Gold' },
-              { value: 59, name: 'Forecasts' }
-            ],
+            data: this.statisticData,
             animationEasing: 'cubicInOut',
             animationDuration: 2600
           }
         ]
+      })
+    },
+    initChart() {
+      this.chart = echarts.init(this.$el, 'macarons')
+    },
+    async getPeriodCount() {
+      await getUserWordPeriodCount().then(res => {
+        this.statisticData = res.data
+        this.setChartOptions()
       })
     }
   }

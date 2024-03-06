@@ -29,7 +29,7 @@ module.exports = {
   productionSourceMap: false,
   // webpack-dev-server 相关配置
   devServer: {
-    host: '0.0.0.0',
+    host: 'localhost',
     port: port,
     open: true,
     proxy: {
@@ -123,7 +123,12 @@ module.exports = {
               }
             }
           })
-          config.optimization.runtimeChunk('single')
+
+          config.optimization.runtimeChunk('single'),
+          {
+             from: path.resolve(__dirname, './public/robots.txt'), //防爬虫文件
+             to: './' //到根目录下
+          }
     })
   }
 }

@@ -1,11 +1,13 @@
 <template>
-  <div :class="className" :style="{height:height,width:width}" />
+  <div :class="className" :style="{height:height,width:width}"></div>
 </template>
 
 <script>
 import * as echarts from 'echarts'
+
 require('echarts/theme/macarons') // echarts theme
 import resize from './mixins/resize'
+import {getExceptAndActualValue} from '@/api/statistics/statistics'
 
 export default {
   mixins: [resize],
@@ -24,25 +26,31 @@ export default {
     },
     autoResize: {
       type: Boolean,
-      default: true
+      default: false
     },
     chartData: {
       type: Object,
-      required: true
+      required: false
     }
   },
   data() {
     return {
-      chart: null
+      chart: null,
+      actualData: [],
+      exceptData: [],
+      xAisData: [],
     }
   },
-  watch: {
-    chartData: {
-      deep: true,
-      handler(val) {
-        this.setOptions(val)
-      }
-    }
+  created() {
+    this.$watch(
+      () => this.$route.params,
+      () => {
+        this.getShowData();
+      },
+      // 组件创建完后获取数据，
+      // 此时 data 已经被 observed 了
+      {immediate: true}
+    )
   },
   mounted() {
     this.$nextTick(() => {
@@ -59,12 +67,14 @@ export default {
   methods: {
     initChart() {
       this.chart = echarts.init(this.$el, 'macarons')
-      this.setOptions(this.chartData)
     },
-    setOptions({ expectedData, actualData } = {}) {
+    setOptions() {
       this.chart.setOption({
+        title: {
+          text: '学习曲线'
+        },
         xAxis: {
-          data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+          data: this.xAisData,
           boundaryGap: false,
           axisTick: {
             show: false
@@ -74,7 +84,7 @@ export default {
           left: 10,
           right: 10,
           bottom: 20,
-          top: 30,
+          top: 50,
           containLabel: true
         },
         tooltip: {
@@ -82,7 +92,7 @@ export default {
           axisPointer: {
             type: 'cross'
           },
-          padding: [5, 10]
+          padding: [5, 8]
         },
         yAxis: {
           axisTick: {
@@ -104,30 +114,50 @@ export default {
           },
           smooth: true,
           type: 'line',
-          data: expectedData,
-          animationDuration: 2800,
+          data: this.exceptData,
+          animationDuration: 5000,
           animationEasing: 'cubicInOut'
         },
-        {
-          name: 'actual',
-          smooth: true,
-          type: 'line',
-          itemStyle: {
-            normal: {
-              color: '#3888fa',
-              lineStyle: {
+          {
+            name: 'actual',
+            smooth: true,
+            type: 'line',
+            itemStyle: {
+              normal: {
                 color: '#3888fa',
-                width: 2
-              },
-              areaStyle: {
-                color: '#f3f8ff'
+                lineStyle: {
+                  color: '#3888fa',
+                  width: 2
+                },
+                areaStyle: {
+                  color: '#f3f8ff'
+                }
               }
-            }
-          },
-          data: actualData,
-          animationDuration: 2800,
-          animationEasing: 'quadraticOut'
-        }]
+            },
+            data: this.actualData,
+            animationDuration: 5000,
+            animationEasing: 'quadraticOut'
+          }]
+      })
+    },
+    async getShowData() {
+      await getExceptAndActualValue().then(res => {
+        console.log(res.data)
+        this.exceptData = res.data.except;
+        this.actualData = res.data.actual;
+        this.xAisData = [];
+        for (let i = 1; i <= this.exceptData.length; i++) {
+          this.xAisData.push(i);
+        }
+      })
+      this.setOptions();
+      var self = this;
+      this.chart.on('click', {
+        seriesName: 'actual'
+      }, (params) => {
+        var day = params.dataIndex + 1;
+        console.log(day)
+        this.$emit("showDataDialog", day)
       })
     }
   }

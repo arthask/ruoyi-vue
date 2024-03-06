@@ -1,31 +1,40 @@
 <template>
   <div class="dashboard-editor-container">
 
-    <panel-group @handleSetLineChartData="handleSetLineChartData" />
+    <panel-group/>
 
     <el-row style="background:#fff;padding:16px 16px 0;margin-bottom:32px;">
-      <line-chart :chart-data="lineChartData" />
+      <line-chart @showDataDialog="showDataDialog"/>
     </el-row>
 
-    <el-row :gutter="32">
-      <el-col :xs="24" :sm="24" :lg="8">
+    <el-row :gutter="24">
+      <el-col :xs="48" :sm="48" :lg="16">
         <div class="chart-wrapper">
-          <raddar-chart />
+          <bar-chart/>
         </div>
       </el-col>
       <el-col :xs="24" :sm="24" :lg="8">
         <div class="chart-wrapper">
-          <pie-chart />
-        </div>
-      </el-col>
-      <el-col :xs="24" :sm="24" :lg="8">
-        <div class="chart-wrapper">
-          <bar-chart />
+          <pie-chart/>
         </div>
       </el-col>
     </el-row>
-
-    
+    <el-dialog
+      title="单词列表"
+      :visible.sync="dialogVisible"
+      width="60%">
+      <el-table v-loading="loading" :data="wordList">
+        <el-table-column type="selection" width="55" align="center"/>
+        <el-table-column label="单词" align="center" prop="word"/>
+      </el-table>
+      <pagination
+        v-show="total>0"
+        :total="total"
+        :page.sync="queryParams.pageNum"
+        :limit.sync="queryParams.pageSize"
+        @pagination="listWordOfDay(this.day)"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -35,6 +44,7 @@ import LineChart from './dashboard/LineChart'
 import RaddarChart from './dashboard/RaddarChart'
 import PieChart from './dashboard/PieChart'
 import BarChart from './dashboard/BarChart'
+import {listWordOfDay} from "@/api/system/record"
 
 const lineChartData = {
   newVisitis: {
@@ -66,12 +76,40 @@ export default {
   },
   data() {
     return {
-      lineChartData: lineChartData.newVisitis
+      lineChartData: lineChartData.newVisitis,
+      dialogVisible: false,
+      count: 0,
+      // 查询参数
+      queryParams: {
+        pageNum: 1,
+        pageSize: 10
+      },
+      // 遮罩层
+      loading: true,
+      // 单词表格数据
+      wordList: [],
+      // 总条数
+      total: 0,
+      day: 0,
     }
   },
   methods: {
     handleSetLineChartData(type) {
       this.lineChartData = lineChartData[type]
+    },
+    /** 查询单词列表 */
+    listWordOfDay(day) {
+      listWordOfDay(day).then(response => {
+        this.wordList = response.rows;
+        this.total = response.total;
+        this.loading = false;
+      });
+    },
+    showDataDialog(day) {
+      console.log("===============" + day)
+      this.dialogVisible = true;
+      this.day = day;
+      this.listWordOfDay(this.day);
     }
   }
 }
@@ -90,7 +128,7 @@ export default {
   }
 }
 
-@media (max-width:1024px) {
+@media (max-width: 1024px) {
   .chart-wrapper {
     padding: 8px;
   }
